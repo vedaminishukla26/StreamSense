@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const s3Client = require('../config/s3');
 const Video = require('../models/Video');
 const logger = require('../utils/logger');
+const { videoQueue } = require('../config/queue');
 
 exports.initiateUpload = async (req, res) => {
     try {
@@ -56,7 +57,19 @@ exports.completeUpload = async (req, res) => {
         video.status = 'queued';
         await video.save();
 
-        res.status(200).json({ message: 'Upload verified', video });
+        await videoQueue.add('analyze-video', { 
+            videoId: video._id,
+            s3Key: video.s3Key,
+            bucket: video.bucket
+        });
+
+        logger.info(`Video ${videoId} added to processing queue`);
+
+        res.status(200).json({ 
+            message: 'Upload verified, processing started', 
+            status: 'queued',
+            video 
+        });
     } catch (error) {
         logger.error(`Upload Complete Error: ${error.message}`);
         res.status(500).json({ message: 'Server Error completing upload' });
