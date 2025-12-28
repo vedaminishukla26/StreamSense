@@ -4,8 +4,8 @@ import { AuthProvider } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProtectedRoute from './components/ProtectedRoute';
-
-const Dashboard = () => <div className="min-h-screen bg-slate-900 p-10 text-white"><h1>Dashboard - Login Success!</h1></div>;
+import Dashboard from './pages/Dashboard';
+import UploadVideo from './components/UploadVideo';
 
 function App() {
   return (
@@ -18,6 +18,11 @@ function App() {
           <Route path="/dashboard" element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/upload" element={
+            <ProtectedRoute>
+              <UploadVideo />
             </ProtectedRoute>
           } />
           <Route path="*" element={<Navigate to="/dashboard" />} />
