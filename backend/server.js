@@ -1,6 +1,7 @@
 require('dotenv').config();
 const app = require('./src/app');
 const logger = require('./src/utils/logger');
+const connectDB = require('./src/config/db');
 
 const PORT = process.env.PORT || 5000;
 
@@ -10,14 +11,25 @@ process.on('uncaughtException', (err) => {
     process.exit(1);
 });
 
-const server = app.listen(PORT, () => {
-    logger.info(`Server running on port ${PORT}`);
-});
+const startServer = async () => {
+    try {
+        await connectDB();
+        const server = app.listen(PORT, () => {
+            logger.info(`Server running on port ${PORT}`);
+        });
 
-process.on('unhandledRejection', (err) => {
-    logger.error('UNHANDLED REJECTION! 💥 Shutting down...');
-    logger.error(err.name, err.message);
-    server.close(() => {
+        process.on('unhandledRejection', (err) => {
+            logger.error('UNHANDLED REJECTION! 💥 Shutting down...');
+            logger.error(err.name, err.message);
+            server.close(() => {
+                process.exit(1);
+            });
+        });
+
+    } catch (err) {
+        logger.error('Failed to connect to DB during startup:', err);
         process.exit(1);
-    });
-});
+    }
+};
+
+startServer();
