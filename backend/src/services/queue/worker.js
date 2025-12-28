@@ -2,6 +2,9 @@ const { Worker } = require('bullmq');
 const logger = require('../../utils/logger');
 const { connection } = require('../../config/queue');
 const Video = require('../../models/Video');
+const { downloadFromS3 } = require('../../utils/s3Helper');
+const { processVideo } = require('../videoProcessor');
+const path = require('path');
 
 const worker = new Worker('video-processing-queue', async (job) => {
     logger.info(`Job ${job.id} started. Processing videoId: ${job.data.videoId}`);
@@ -12,16 +15,17 @@ const worker = new Worker('video-processing-queue', async (job) => {
 
         video.status = 'processing';
         await video.save();
+        const { s3Key, bucket } = job.data;
+        const tempFilePath = path.join(__dirname, '../../../temp', `vid-${job.data.videoId}.mp4`);
+        logger.info(`Downloading from S3...`);
+        await downloadFromS3(bucket, s3Key, tempFilePath);
 
-        logger.info(`Analyzing content for ${video.originalName}... (Simulated)`);
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        logger.info(`Analyzing content...`);
+        const analysisResult = await processVideo(tempFilePath, job.data.videoId)
+        video.status = 'completed'
+        video.sensitivity = analysisResult
 
-        video.status = 'completed';
-        video.sensitivity = {
-            isSafe: true,
-            processedAt: new Date()
-        };
-        await video.save();
+        await video.save()
 
         logger.info(`Job ${job.id} finished! Video marked as completed.`);
         
